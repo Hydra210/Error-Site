@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shop — Error Dev Group</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .shop-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start; }
+    @media (max-width: 960px) { .shop-layout { grid-template-columns: 1fr; } }
+
+    /* cart sidebar */
+    .cart-sidebar {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      position: sticky;
+      top: 84px;
+    }
+
+    .cart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .cart-header h3 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .cart-header h3 svg { width: 16px; height: 16px; color: var(--blue-400); }
+    .cart-count {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--blue-600); color: #fff;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .cart-empty {
+      text-align: center; padding: 32px 0;
+      color: var(--text-3);
+    }
+    .cart-empty svg { width: 40px; height: 40px; opacity: 0.25; display: block; margin: 0 auto 10px; }
+    .cart-empty p { font-size: 13px; }
+
+    .cart-items { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+
+    .cart-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 12px;
+      animation: slidein 0.3s var(--spring) both;
+    }
+    .cart-item-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: rgba(26,127,255,0.1); border: 1px solid var(--border-hover);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .cart-item-icon svg { width: 16px; height: 16px; color: var(--blue-400); }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-size: 13px; font-weight: 600; }
+    .cart-item-price { font-size: 12px; color: var(--text-3); }
+    .cart-item-remove {
+      width: 26px; height: 26px; border-radius: 8px;
+      background: transparent; border: 1px solid transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-3);
+      transition: all 0.2s var(--spring);
+    }
+    .cart-item-remove svg { width: 13px; height: 13px; }
+    .cart-item-remove:hover { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: #f87171; transform: scale(1.15); }
+
+    .cart-divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+    .cart-total { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .cart-total-label { font-size: 13px; color: var(--text-2); font-weight: 600; }
+    .cart-total-val { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--text-0); }
+
+    /* product grid */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+
+    .product-card {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); overflow: hidden;
+      cursor: pointer; transition: all var(--duration) var(--spring);
+      position: relative; display: flex; flex-direction: column;
+    }
+    .product-card:hover { border-color: var(--border-hover); transform: translateY(-5px); box-shadow: var(--glow-sm); }
+
+    .product-badge {
+      position: absolute; top: 14px; left: 14px;
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 4px 10px; border-radius: var(--radius-pill);
+      background: rgba(26,127,255,0.15); border: 1px solid var(--border-hover); color: var(--blue-300);
+      z-index: 1;
+    }
+    .product-badge.hot { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+    .product-badge.new { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.25); color: #86efac; }
+
+    .product-thumb {
+      height: 140px; background: linear-gradient(135deg, var(--bg-4), var(--bg-3));
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.3s var(--spring); overflow: hidden; position: relative;
+    }
+    .product-thumb::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(26,127,255,0.08), transparent);
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .product-card:hover .product-thumb { transform: scale(1.03); }
+    .product-card:hover .product-thumb::after { opacity: 1; }
+    .product-thumb svg { width: 48px; height: 48px; color: var(--blue-500); opacity: 0.6; }
+
+    .product-body { padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .product-name { font-size: 15px; font-weight: 700; color: var(--text-0); }
+    .product-desc { font-size: 13px; color: var(--text-2); line-height: 1.55; flex: 1; }
+
+    .product-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-top: 1px solid var(--border); }
+    .product-price { font-family: var(--font-display); font-size: 20px; font-weight: 800; }
+    .product-price small { font-size: 12px; color: var(--text-3); font-family: var(--font-body); font-weight: 400; margin-left: 2px; }
+
+    .add-to-cart-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--radius-pill);
+      background: linear-gradient(135deg, var(--blue-600), var(--blue-500));
+      border: 1px solid var(--blue-400); color: #fff;
+      font-size: 12.5px; font-weight: 600; cursor: pointer;
+      transition: all var(--duration) var(--spring); box-shadow: var(--glow-sm);
+    }
+    .add-to-cart-btn svg { width: 13px; height: 13px; }
+    .add-to-cart-btn:hover { transform: scale(1.07) translateY(-1px); box-shadow: var(--glow-md); background: linear-gradient(135deg, var(--blue-500), var(--blue-400)); }
+    .add-to-cart-btn:active { transform: scale(0.96); }
+
+    /* checkout modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(4,8,15,0.8);
+      backdrop-filter: blur(8px); z-index: 500;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--bg-2); border: 1px solid var(--border-hover);
+      border-radius: var(--radius-xl); padding: 36px; width: 100%; max-width: 460px;
+      transform: translateY(20px) scale(0.97);
+      transition: transform 0.35s var(--spring);
+      position: relative; overflow: hidden;
+    }
+    .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+    .modal::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--blue-400), transparent); }
+
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 32px; height: 32px; border-radius: 9px;
+      background: var(--bg-3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-2);
+      transition: all 0.2s var(--spring);
+    }
+    .modal-close svg { width: 14px; height: 14px; }
+    .modal-close:hover { background: var(--bg-4); color: var(--text-0); transform: scale(1.1) rotate(90deg); }
+
+    .modal h3 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .modal p { font-size: 13px; color: var(--text-2); margin-bottom: 24px; }
+
+    .checkout-summary { background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; }
+    .checkout-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-2); margin-bottom: 6px; }
+    .checkout-row:last-child { margin-bottom: 0; font-weight: 700; color: var(--text-0); font-size: 15px; }
+
+    .modal .form-group { margin-bottom: 12px; }
+    .modal .form-label { font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 6px; }
+    .modal .input { width: 100%; }
+  </style>
+</head>
+<body>
+
+<div class="orb-field">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<header>
+  <nav class="nav" id="nav">
+    <a href="../index.html" class="nav-logo">
+      <div class="nav-logo-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      error
+    </a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="tools.html">Tools</a></li>
+      <li><a href="shop.html" class="active">Shop</a></li>
+      <li><a href="about.html">About</a></li>
+    </ul>
+    <div class="nav-actions">
+      <button class="mobile-menu-btn" aria-label="Menu">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <a href="login.html" class="btn btn-ghost">Log in</a>
+      <a href="signup.html" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        Sign up
+      </a>
+    </div>
+  </nav>
+</header>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <div class="container">
+      <div class="section-label reveal">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Shop
+      </div>
+      <h1 class="reveal" style="margin-bottom:12px;">Pick up what you need.</h1>
+      <p class="reveal" style="color:var(--text-2); font-size:17px; max-width:440px; margin:0 auto;">Fast delivery, real support. No sketchy middlemen.</p>
+    </div>
+  </div>
+
+  <section class="section" style="padding-top:40px;">
+    <div class="container">
+
+      <div class="shop-filters reveal">
+        <button class="filter-btn active" onclick="filterShop('all', this)">All</button>
+        <button class="filter-btn" onclick="filterShop('robux', this)">Robux</button>
+        <button class="filter-btn" onclick="filterShop('accounts', this)">Accounts</button>
+        <button class="filter-btn" onclick="filterShop('other', this)">Other</button>
+      </div>
+
+      <div class="shop-layout">
+        <!-- product grid -->
+        <div class="product-grid" id="product-grid">
+
+          <div class="product-card reveal" data-cat="robux" onclick="addToCart(this)">
+            <div class="product-badge hot">Popular</div>
+            <div class="product-thumb">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="product-body">
+              <div class="product-name">Robux — 800</div>
+              <div class="product-desc">800 Robux sent directly to your Roblox account. Delivered within a few hours of purchase.</div>
+            </div>
+            <div class="product-footer">
+              <div class="product-price">$9 <small>USD</small></div>
+              <button class="add-to-cart-btn" onclick="event.stopPropagation(); addToCartById('Robux 800', 9)" data-name="Robux 800" data-price="9">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div class="product-card reveal" data-cat="robux" onclick="addToCartById('Robux 1800', 19)">
+            <div class="product-badge">Best Value</div>
+            <div class="product-thumb">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <div class="product-body">
+              <div class="product-name">Robux — 1800</div>
+              <div class="product-desc">The best bang for your buck. 1800 Robux at a discounted rate, same-day delivery.</div>
+            </div>
+            <div class="product-footer">
+              <div class="product-price">$19 <small>USD</small></div>
+              <button class="add-to-cart-btn" onclick="event.stopPropagation(); addToCartById('Robux 1800', 19)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div class="product-card reveal" data-cat="robux" onclick="addToCartById('Robux 4500', 39)">
+            <div class="product-badge new">New</div>
+            <div class="product-thumb">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <div class="product-body">
+              <div class="product-name">Robux — 4500</div>
+              <div class="product-desc">Big pack for heavy players. 4500 Robux with priority delivery and order tracking.</div>
+            </div>
+            <div class="product-footer">
+              <div class="product-price">$39 <small>USD</small></div>
+              <button class="add-to-cart-btn" onclick="event.stopPropagation(); addToCartById('Robux 4500', 39)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div class="product-card reveal" data-cat="accounts" onclick="contactForItem('Roblox Account')">
+            <div class="product-badge">Contact us</div>
+            <div class="product-thumb">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="product-body">
+              <div class="product-name">Roblox Accounts</div>
+              <div class="product-desc">Various accounts available. DM us on Discord to see current listings, prices, and stats.</div>
+            </div>
+            <div class="product-footer">
+              <div class="product-price" style="font-size:15px; font-family: var(--font-body); color: var(--text-2);">DM for price</div>
+              <button class="add-to-cart-btn" onclick="event.stopPropagation(); contactForItem('Roblox Account')">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Contact
+              </button>
+            </div>
+          </div>
+
+          <div class="product-card reveal" data-cat="other" onclick="contactForItem('Custom Order')">
+            <div class="product-badge" style="border-style: dashed;">Custom</div>
+            <div class="product-thumb" style="border-style: dashed;">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            </div>
+            <div class="product-body">
+              <div class="product-name">Custom Order</div>
+              <div class="product-desc">Need something specific? Hit us up and we'll sort it out. We handle custom requests too.</div>
+            </div>
+            <div class="product-footer">
+              <div class="product-price" style="font-size:15px; font-family: var(--font-body); color: var(--text-2);">Let's talk</div>
+              <button class="add-to-cart-btn" onclick="event.stopPropagation(); contactForItem('Custom Order')">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                DM us
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- cart sidebar -->
+        <aside class="cart-sidebar reveal">
+          <div class="cart-header">
+            <h3>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+              Cart
+            </h3>
+            <div class="cart-count" id="cart-count">0</div>
+          </div>
+
+          <div id="cart-empty" class="cart-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            <p>Nothing in your cart yet</p>
+          </div>
+
+          <div id="cart-items" class="cart-items" style="display:none;"></div>
+
+          <div id="cart-footer" style="display:none;">
+            <div class="cart-divider"></div>
+            <div class="cart-total">
+              <span class="cart-total-label">Total</span>
+              <span class="cart-total-val" id="cart-total">$0</span>
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; padding:13px;" onclick="openCheckout()">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+              Checkout
+            </button>
+            <button class="btn btn-ghost" style="width:100%; justify-content:center; margin-top:8px;" onclick="clearCart()">Clear cart</button>
+          </div>
+        </aside>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<!-- checkout modal -->
+<div class="modal-overlay" id="checkout-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeCheckout()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h3>Checkout</h3>
+    <p>Fill in your details and we'll get your order sorted.</p>
+
+    <div class="checkout-summary" id="checkout-summary"></div>
+
+    <div class="form-group">
+      <label class="form-label">Roblox Username</label>
+      <input class="input" type="text" placeholder="Your Roblox username" id="co-username" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Discord Tag</label>
+      <input class="input" type="text" placeholder="yourname or yourname#0000" id="co-discord" />
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label class="form-label">Email (for receipt)</label>
+      <input class="input" type="email" placeholder="you@email.com" id="co-email" />
+    </div>
+
+    <button class="btn btn-primary" style="width:100%; justify-content:center; padding:13px;" onclick="submitOrder()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Place Order
+    </button>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        error
+      </div>
+      <div class="footer-links">
+        <a href="tools.html">Tools</a>
+        <a href="shop.html">Shop</a>
+        <a href="about.html">About</a>
+      </div>
+      <div class="footer-copy">&copy; 2024 Error Dev Group</div>
+    </div>
+  </div>
+</footer>
+
+<div class="toast-container"></div>
+
+<script src="../js/main.js"></script>
+<script>
+  let cart = [];
+
+  function addToCartById(name, price) {
+    const existing = cart.find(i => i.name === name);
+    if (existing) { existing.qty++; }
+    else { cart.push({ name, price, qty: 1 }); }
+    renderCart();
+    showToast(name + ' added to cart', 'cart');
+  }
+
+  function removeFromCart(idx) {
+    cart.splice(idx, 1);
+    renderCart();
+  }
+
+  function clearCart() {
+    cart = [];
+    renderCart();
+    showToast('Cart cleared', 'info');
+  }
+
+  function contactForItem(item) {
+    showToast('DM us on Discord for ' + item, 'info');
+  }
+
+  function renderCart() {
+    const count = cart.reduce((a, i) => a + i.qty, 0);
+    const total = cart.reduce((a, i) => a + i.price * i.qty, 0);
+
+    document.getElementById('cart-count').textContent = count;
+    document.getElementById('cart-total').textContent = '$' + total;
+
+    const empty = document.getElementById('cart-empty');
+    const itemsEl = document.getElementById('cart-items');
+    const footer = document.getElementById('cart-footer');
+
+    if (cart.length === 0) {
+      empty.style.display = 'block';
+      itemsEl.style.display = 'none';
+      footer.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    itemsEl.style.display = 'flex';
+    footer.style.display = 'block';
+
+    itemsEl.innerHTML = cart.map((item, i) => `
+      <div class="cart-item">
+        <div class="cart-item-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.name}${item.qty > 1 ? ' ×' + item.qty : ''}</div>
+          <div class="cart-item-price">$${item.price * item.qty} USD</div>
+        </div>
+        <button class="cart-item-remove" onclick="removeFromCart(${i})">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  function openCheckout() {
+    const total = cart.reduce((a, i) => a + i.price * i.qty, 0);
+    const rows = cart.map(i => `<div class="checkout-row"><span>${i.name}${i.qty > 1 ? ' ×'+i.qty : ''}</span><span>$${i.price * i.qty}</span></div>`).join('');
+    document.getElementById('checkout-summary').innerHTML = rows + `<div class="checkout-row"><span>Total</span><span>$${total} USD</span></div>`;
+    document.getElementById('checkout-modal').classList.add('open');
+  }
+
+  function closeCheckout() {
+    document.getElementById('checkout-modal').classList.remove('open');
+  }
+
+  function submitOrder() {
+    const u = document.getElementById('co-username').value.trim();
+    const d = document.getElementById('co-discord').value.trim();
+    if (!u || !d) { showToast('Fill in your username and Discord', 'error'); return; }
+    closeCheckout();
+    clearCart();
+    showToast('Order placed! We\'ll reach out on Discord shortly.', 'success');
+  }
+
+  function filterShop(cat, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.product-card').forEach(card => {
+      const match = cat === 'all' || card.dataset.cat === cat;
+      card.style.display = match ? '' : 'none';
+    });
+  }
+
+  // close modal on overlay click
+  document.getElementById('checkout-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeCheckout();
+  });
+</script>
+
+</body>
+</html>
