@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — Error Dev Group</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --font-body: 'DM Sans', system-ui, sans-serif;
+      --font-display: 'Syne', system-ui, sans-serif;
+      --blue: #1a7fff;
+      --blue-dark: #1260cc;
+      --text: #0f1117;
+      --text-2: #374151;
+      --text-3: #6b7280;
+      --border: #e5e7eb;
+      --bg: #ffffff;
+      --bg-subtle: #f9fafb;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── top bar ─── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar-logo {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-logo svg {
+      width: 20px;
+      height: 20px;
+      color: var(--blue);
+    }
+
+    .topbar-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .topbar-back:hover { color: var(--blue); }
+    .topbar-back svg { width: 14px; height: 14px; }
+
+    /* ─── layout ─── */
+    .page-wrap {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 60px 24px 100px;
+    }
+
+    /* ─── header ─── */
+    .doc-header {
+      margin-bottom: 52px;
+      padding-bottom: 36px;
+      border-bottom: 2px solid var(--text);
+    }
+
+    .doc-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--blue);
+      background: rgba(26,127,255,0.08);
+      border: 1px solid rgba(26,127,255,0.2);
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+    }
+
+    .doc-tag svg { width: 12px; height: 12px; }
+
+    .doc-title {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 6vw, 48px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .doc-meta {
+      font-size: 13.5px;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .doc-meta span { display: flex; align-items: center; gap: 5px; }
+    .doc-meta svg { width: 13px; height: 13px; }
+
+    /* ─── intro box ─── */
+    .intro-box {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--blue);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 48px;
+      font-size: 14.5px;
+      color: var(--text-2);
+      line-height: 1.65;
+    }
+
+    /* ─── sections ─── */
+    .doc-section {
+      margin-bottom: 44px;
+    }
+
+    .section-num {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+
+    .doc-section h2 {
+      font-family: var(--font-display);
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .doc-section p {
+      font-size: 15px;
+      color: var(--text-2);
+      margin-bottom: 12px;
+    }
+
+    .doc-section p:last-child { margin-bottom: 0; }
+
+    .doc-section ul {
+      list-style: none;
+      margin: 12px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .doc-section ul li {
+      font-size: 15px;
+      color: var(--text-2);
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .doc-section ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 6px;
+      height: 6px;
+      background: var(--blue);
+      border-radius: 50%;
+      opacity: 0.6;
+    }
+
+    /* ─── contact box ─── */
+    .contact-box {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-top: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .contact-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(26,127,255,0.1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .contact-icon svg { width: 18px; height: 18px; }
+    .contact-box strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .contact-box p { font-size: 13.5px; color: var(--text-3); margin: 0; }
+
+    /* ─── footer ─── */
+    .doc-footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .doc-footer p { font-size: 12.5px; color: var(--text-3); }
+    .doc-footer a { color: var(--blue); font-weight: 600; text-decoration: none; font-size: 12.5px; }
+    .doc-footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .page-wrap { padding: 40px 18px 80px; }
+      .doc-header { margin-bottom: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="../index.html" class="topbar-logo">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    Error Dev Group
+  </a>
+  <a href="signup.html" class="topbar-back">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Back to sign up
+  </a>
+</div>
+
+<div class="page-wrap">
+
+  <div class="doc-header">
+    <div class="doc-tag">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Legal
+    </div>
+    <h1 class="doc-title">Terms of Service</h1>
+    <div class="doc-meta">
+      <span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Effective June 20, 2026
+      </span>
+      <span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Error Dev Group
+      </span>
+    </div>
+  </div>
+
+  <div class="intro-box">
+    Please read these Terms of Service carefully before using any products, services, or purchasing from Error Dev Group. By creating an account or making a purchase, you confirm that you have read, understood, and agree to be bound by these terms.
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 1</span>
+    <h2>Acceptance of Terms</h2>
+    <p>By accessing or using any service provided by Error Dev Group ("we," "us," or "our"), including our website, shop, tools, and Roblox-related products, you agree to these Terms of Service. If you do not agree, do not use our services.</p>
+    <p>We reserve the right to update these terms at any time. Continued use of our services after changes are posted constitutes your acceptance of the revised terms.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 2</span>
+    <h2>Eligibility</h2>
+    <p>You must be at least 13 years old to use our services. If you are under 18, you confirm that you have parental or guardian consent to use our services and make purchases. By using Error Dev Group services, you represent that you meet these requirements.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 3</span>
+    <h2>Accounts</h2>
+    <p>When you create an account with us, you are responsible for:</p>
+    <ul>
+      <li>Keeping your login credentials secure and confidential</li>
+      <li>All activity that occurs under your account</li>
+      <li>Notifying us immediately of any unauthorized use</li>
+      <li>Providing accurate and up-to-date account information</li>
+    </ul>
+    <p>We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or are used in a manner that harms Error Dev Group or other users.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 4</span>
+    <h2>Purchases & Payments</h2>
+    <p>All purchases made through Error Dev Group are subject to the following:</p>
+    <ul>
+      <li>Prices are listed in USD unless otherwise stated and are subject to change without notice</li>
+      <li>Payment must be completed in full before delivery of any product or service</li>
+      <li>Digital goods (including Robux, accounts, and in-game items) are delivered after payment confirmation</li>
+      <li>You are responsible for any applicable taxes or fees in your jurisdiction</li>
+    </ul>
+    <p>We do not store payment card information. Transactions are processed through third-party payment providers subject to their own terms.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 5</span>
+    <h2>Refunds & Disputes</h2>
+    <p>Due to the digital nature of our products, all sales are generally final. Refunds may be considered in the following circumstances:</p>
+    <ul>
+      <li>You did not receive the product or service you paid for</li>
+      <li>The product was materially different from what was described</li>
+      <li>A technical error on our end prevented delivery</li>
+    </ul>
+    <p>Refund requests must be submitted within 48 hours of purchase by contacting us via Discord. We reserve the right to decline refund requests where the product was delivered as described or where we determine abuse of this policy.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 6</span>
+    <h2>Prohibited Conduct</h2>
+    <p>When using our services, you agree not to:</p>
+    <ul>
+      <li>Use our services for any unlawful purpose or in violation of any applicable laws</li>
+      <li>Attempt to gain unauthorized access to our systems, accounts, or data</li>
+      <li>Resell, redistribute, or share purchased products without our written consent</li>
+      <li>Engage in chargebacks or payment disputes in bad faith</li>
+      <li>Harass, threaten, or abuse Error Dev Group staff or other users</li>
+      <li>Use purchased Roblox items or accounts in violation of Roblox's own Terms of Service</li>
+      <li>Impersonate Error Dev Group or any of its staff members</li>
+    </ul>
+    <p>Violation of any of the above may result in immediate account suspension and potential legal action where applicable.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 7</span>
+    <h2>Intellectual Property</h2>
+    <p>All content on this website — including but not limited to scripts, tools, designs, logos, and written content — is the property of Error Dev Group and is protected under applicable copyright and intellectual property laws.</p>
+    <p>You may not copy, reproduce, distribute, or create derivative works from any of our content without explicit written permission. Unauthorized use of our intellectual property may result in legal action.</p>
+    <p>Error Dev Group was founded in 2017 and has maintained continuous ownership of its brand, tools, and creative works since then.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 8</span>
+    <h2>Third-Party Services</h2>
+    <p>Our services may involve or reference third-party platforms, including Roblox, Discord, and payment processors. Error Dev Group is not responsible for the availability, content, or practices of any third-party services. Use of those platforms is governed by their respective terms and policies.</p>
+    <p>We are not affiliated with or endorsed by Roblox Corporation.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 9</span>
+    <h2>Disclaimer of Warranties</h2>
+    <p>Our services are provided "as is" and "as available" without warranties of any kind, either express or implied. We do not guarantee that our services will be uninterrupted, error-free, or completely secure.</p>
+    <p>To the fullest extent permitted by law, Error Dev Group disclaims all warranties, including implied warranties of merchantability, fitness for a particular purpose, and non-infringement.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 10</span>
+    <h2>Limitation of Liability</h2>
+    <p>To the maximum extent permitted by applicable law, Error Dev Group shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of our services, even if we have been advised of the possibility of such damages.</p>
+    <p>Our total liability to you for any claim arising out of or relating to these terms or our services shall not exceed the amount you paid to us in the 30 days preceding the claim.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 11</span>
+    <h2>Termination</h2>
+    <p>We may terminate or suspend your access to our services at any time, with or without cause, and with or without notice. Upon termination, your right to use our services ceases immediately. Provisions of these terms that by their nature should survive termination shall do so, including ownership provisions, warranty disclaimers, and limitations of liability.</p>
+  </div>
+
+  <div class="doc-section">
+    <span class="section-num">Section 12</span>
+    <h2>Contact Us</h2>
+    <p>If you have questions about these Terms of Service or a dispute you'd like to resolve, reach out to us:</p>
+    <div class="contact-box">
+      <div class="contact-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div>
+        <strong>Discord</strong>
+        <p>The fastest way to reach us. DM us or open a support ticket in the Error Dev Group Discord server.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <p>&copy; 2017&ndash;2026 Error Dev Group. All rights reserved.</p>
+    <a href="privacy.html">Privacy Policy &rarr;</a>
+  </div>
+
+</div>
+</body>
+</html>
