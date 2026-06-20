@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Listing Builder — Error Dev Group</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    /* ─── badge styles (copied from shop) ─── */
+    .badge-hot { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; }
+    .badge-trending { background: rgba(234,179,8,0.12); border: 1px solid rgba(234,179,8,0.3); color: #fde047; }
+    .badge-new { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #86efac; }
+    .badge-sale { background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3); color: #d8b4fe; }
+    .badge-limited { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); color: #fdba74; }
+    .badge-default { background: rgba(26,127,255,0.15); border: 1px solid var(--border-hover); color: var(--blue-300); }
+
+    /* ─── builder modal styles (inline since no modal overlay needed) ─── */
+    .builder-section { margin-bottom: 24px; }
+    .builder-section-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
+    .builder-section-title svg { width: 13px; height: 13px; color: var(--blue-400); }
+    .badge-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge-option { padding: 5px 14px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); color: var(--text-2); background: var(--bg-3); transition: all 0.2s; }
+    .badge-option.selected { outline: 2px solid var(--blue-400); outline-offset: 2px; }
+    .badge-option.none.selected { outline-color: var(--blue-400); }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label span { font-size: 14px; font-weight: 500; display: block; }
+    .toggle-label small { font-size: 12px; color: var(--text-3); }
+    .toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-4); border: 1px solid var(--border); border-radius: 34px; transition: 0.3s; }
+    .toggle-track:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: var(--text-3); border-radius: 50%; transition: 0.3s; }
+    .toggle input:checked + .toggle-track { background: var(--blue-600); border-color: var(--blue-500); }
+    .toggle input:checked + .toggle-track:before { transform: translateX(18px); background: #fff; }
+    .listing-preview { background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; margin-top: 20px; }
+    .preview-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 12px; }
+    .preview-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .preview-thumb { height: 100px; background: linear-gradient(135deg, var(--bg-4), var(--bg-3)); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; position: relative; }
+    .preview-thumb svg { width: 36px; height: 36px; color: var(--blue-500); opacity: 0.5; }
+    .preview-badge-wrap { position: absolute; top: 10px; left: 10px; }
+    .product-badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 10px; border-radius: var(--radius-pill); }
+    .preview-body { padding: 12px 14px; }
+    .preview-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .preview-desc { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+    .preview-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--border); }
+    .preview-price { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
+    .preview-price small { font-size: 11px; color: var(--text-3); font-family: var(--font-body); font-weight: 400; }
+
+    /* ─── manage list ─── */
+    .manage-listing { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 8px; transition: border-color 0.2s; }
+    .manage-listing:hover { border-color: var(--border-hover); }
+    .manage-listing-info { flex: 1; }
+    .manage-listing-name { font-size: 13.5px; font-weight: 600; }
+    .manage-listing-meta { font-size: 12px; color: var(--text-3); }
+    .manage-listing-actions { display: flex; gap: 6px; }
+    .icon-btn-sm { width: 30px; height: 30px; border-radius: 8px; background: var(--bg-4); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-2); transition: all 0.2s var(--spring); }
+    .icon-btn-sm svg { width: 13px; height: 13px; }
+    .icon-btn-sm:hover { background: var(--bg-2); border-color: var(--border-hover); color: var(--text-0); transform: scale(1.1); }
+    .icon-btn-sm.danger:hover { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.35); color: #f87171; }
+
+    /* ─── page layout ─── */
+    .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+    @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } }
+    .admin-panel { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 28px; }
+    .admin-panel-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .admin-panel-title svg { width: 16px; height: 16px; color: var(--blue-400); }
+    .admin-panel-sub { font-size: 13px; color: var(--text-2); margin-bottom: 24px; }
+    .admin-header { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 20px 28px; margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .admin-header-left { display: flex; align-items: center; gap: 12px; }
+    .admin-lock-icon { width: 38px; height: 38px; background: rgba(26,127,255,0.1); border: 1px solid var(--border-hover); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: var(--blue-400); flex-shrink: 0; }
+    .admin-lock-icon svg { width: 17px; height: 17px; }
+    .admin-header-title { font-size: 15px; font-weight: 700; }
+    .admin-header-sub { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+    .admin-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 10px; border-radius: var(--radius-pill); background: rgba(26,127,255,0.15); border: 1px solid var(--border-hover); color: var(--blue-300); }
+  </style>
+</head>
+<body>
+
+<!-- ─── NAV ─── -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="../index.html">
+      <div class="nav-logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </div>
+      Error Dev Group
+    </a>
+    <div class="nav-links">
+      <a href="../index.html" class="nav-link">Home</a>
+      <a href="shop.html" class="nav-link">Shop</a>
+      <a href="tools.html" class="nav-link">Tools</a>
+      <a href="about.html" class="nav-link">About</a>
+    </div>
+    <div class="nav-actions">
+      <a href="login.html" class="btn">Log In</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── MAIN ─── -->
+<main style="padding-top: 100px; padding-bottom: 80px;">
+  <div class="container">
+
+    <!-- header bar -->
+    <div class="admin-header reveal">
+      <div class="admin-header-left">
+        <div class="admin-lock-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div>
+          <div class="admin-header-title">Listing Builder</div>
+          <div class="admin-header-sub">Error Dev Group · Developer panel</div>
+        </div>
+      </div>
+      <span class="admin-badge">Dev only</span>
+    </div>
+
+    <div class="admin-grid">
+
+      <!-- ─── LEFT: builder form ─── -->
+      <div class="admin-panel reveal">
+        <div class="admin-panel-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span id="builder-title">Create listing</span>
+        </div>
+        <p class="admin-panel-sub">Fill in the details below. A live preview updates as you type.</p>
+
+        <!-- basic info -->
+        <div class="builder-section">
+          <div class="builder-section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Basic info
+          </div>
+          <div class="form-row" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label class="form-label">Listing name *</label>
+              <input class="input" id="b-name" type="text" placeholder="e.g. Robux 800" oninput="updatePreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select class="input" id="b-cat" onchange="updatePreview()">
+                <option value="robux">Robux</option>
+                <option value="accounts">Accounts</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description *</label>
+            <textarea class="input" id="b-desc" placeholder="Describe what's included, delivery time, any conditions..." oninput="updatePreview()"></textarea>
+          </div>
+        </div>
+
+        <!-- pricing -->
+        <div class="builder-section">
+          <div class="builder-section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Pricing
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Price</label>
+              <input class="input" id="b-price" type="text" placeholder="e.g. $9 or DM for price" oninput="updatePreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Currency / unit</label>
+              <input class="input" id="b-currency" type="text" placeholder="USD" oninput="updatePreview()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- badge -->
+        <div class="builder-section">
+          <div class="builder-section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Badge / Label
+          </div>
+          <div class="badge-picker" id="badge-picker">
+            <div class="badge-option none selected" data-badge="none" onclick="selectBadge(this)">None</div>
+            <div class="badge-option badge-hot" data-badge="hot" onclick="selectBadge(this)">Hot</div>
+            <div class="badge-option badge-trending" data-badge="trending" onclick="selectBadge(this)">Trending</div>
+            <div class="badge-option badge-new" data-badge="new" onclick="selectBadge(this)">New</div>
+            <div class="badge-option badge-sale" data-badge="sale" onclick="selectBadge(this)">Sale</div>
+            <div class="badge-option badge-limited" data-badge="limited" onclick="selectBadge(this)">Limited</div>
+            <div class="badge-option badge-default" data-badge="custom" onclick="selectBadge(this)">Custom</div>
+          </div>
+          <div id="custom-badge-wrap" style="margin-top:10px; display:none;">
+            <input class="input" id="b-custom-badge" type="text" placeholder="Type your custom label..." maxlength="20" oninput="updatePreview()" />
+          </div>
+        </div>
+
+        <!-- options -->
+        <div class="builder-section">
+          <div class="builder-section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            Options
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <span>Requires Discord DM</span>
+              <small>Buyer contacts you on Discord instead of adding to cart</small>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="b-discord" onchange="updatePreview()" />
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <span>Visible in shop</span>
+              <small>Uncheck to save as draft — hidden from customers</small>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="b-visible" checked onchange="updatePreview()" />
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- live preview -->
+        <div class="listing-preview">
+          <div class="preview-label">Live preview</div>
+          <div class="preview-card">
+            <div class="preview-thumb">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <div class="preview-badge-wrap" id="preview-badge-wrap"></div>
+            </div>
+            <div class="preview-body">
+              <div class="preview-name" id="preview-name">Listing name</div>
+              <div class="preview-desc" id="preview-desc">Your description will appear here...</div>
+            </div>
+            <div class="preview-footer">
+              <div class="preview-price" id="preview-price">$0</div>
+              <div id="preview-action"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:24px;">
+          <button class="btn btn-primary" style="flex:1;justify-content:center;padding:13px;" onclick="saveListing()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Save listing
+          </button>
+          <button class="btn" onclick="resetForm()">Clear</button>
+        </div>
+      </div>
+
+      <!-- ─── RIGHT: manage panel ─── -->
+      <div class="admin-panel reveal" style="position:sticky; top:84px;">
+        <div class="admin-panel-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Manage listings
+        </div>
+        <p class="admin-panel-sub">Edit, hide, or delete existing listings. Changes sync to the shop instantly.</p>
+        <div id="manage-list">
+          <p style="color:var(--text-3); font-size:13px; text-align:center; padding:20px 0;">No listings yet.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<!-- ─── FOOTER ─── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-copy">&copy; 2017&ndash;2026 Error Dev Group</div>
+    </div>
+  </div>
+</footer>
+
+<div class="toast-container"></div>
+
+<script src="../js/main.js"></script>
+<script>
+  // ─── state ───
+  let listings = JSON.parse(localStorage.getItem('err-listings') || '[]');
+  let editingId = null;
+  let selectedBadge = 'none';
+
+  const BADGE_CLASSES = {
+    hot: 'badge-hot', trending: 'badge-trending', new: 'badge-new',
+    sale: 'badge-sale', limited: 'badge-limited', custom: 'badge-default', none: ''
+  };
+
+  // ─── builder ───
+  function resetForm() {
+    editingId = null;
+    selectedBadge = 'none';
+    document.getElementById('builder-title').textContent = 'Create listing';
+    document.getElementById('b-name').value = '';
+    document.getElementById('b-desc').value = '';
+    document.getElementById('b-price').value = '';
+    document.getElementById('b-currency').value = 'USD';
+    document.getElementById('b-cat').value = 'robux';
+    document.getElementById('b-discord').checked = false;
+    document.getElementById('b-visible').checked = true;
+    document.getElementById('b-custom-badge').value = '';
+    document.querySelectorAll('.badge-option').forEach(o => o.classList.toggle('selected', o.dataset.badge === 'none'));
+    document.getElementById('custom-badge-wrap').style.display = 'none';
+    updatePreview();
+  }
+
+  function loadIntoForm(id) {
+    const l = listings.find(x => x.id === id);
+    if (!l) return;
+    editingId = id;
+    selectedBadge = l.badge || 'none';
+    document.getElementById('builder-title').textContent = 'Edit listing';
+    document.getElementById('b-name').value = l.name;
+    document.getElementById('b-desc').value = l.desc;
+    document.getElementById('b-price').value = l.price;
+    document.getElementById('b-currency').value = l.currency || '';
+    document.getElementById('b-cat').value = l.cat;
+    document.getElementById('b-discord').checked = l.discord;
+    document.getElementById('b-visible').checked = l.visible;
+    if (l.customBadge) document.getElementById('b-custom-badge').value = l.customBadge;
+    document.querySelectorAll('.badge-option').forEach(o => o.classList.toggle('selected', o.dataset.badge === selectedBadge));
+    document.getElementById('custom-badge-wrap').style.display = selectedBadge === 'custom' ? 'block' : 'none';
+    updatePreview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function selectBadge(el) {
+    document.querySelectorAll('.badge-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedBadge = el.dataset.badge;
+    document.getElementById('custom-badge-wrap').style.display = selectedBadge === 'custom' ? 'block' : 'none';
+    updatePreview();
+  }
+
+  function updatePreview() {
+    const name = document.getElementById('b-name').value || 'Listing name';
+    const desc = document.getElementById('b-desc').value || 'Your description will appear here...';
+    const price = document.getElementById('b-price').value || '$0';
+    const currency = document.getElementById('b-currency').value || '';
+    const discord = document.getElementById('b-discord').checked;
+    const customBadge = document.getElementById('b-custom-badge').value || 'Custom';
+
+    document.getElementById('preview-name').textContent = name;
+    document.getElementById('preview-desc').textContent = desc;
+    document.getElementById('preview-price').innerHTML = price + (currency ? `<small> ${currency}</small>` : '');
+
+    const badgeWrap = document.getElementById('preview-badge-wrap');
+    if (selectedBadge && selectedBadge !== 'none') {
+      const label = selectedBadge === 'custom' ? customBadge : selectedBadge;
+      badgeWrap.innerHTML = `<span class="product-badge ${BADGE_CLASSES[selectedBadge] || 'badge-default'}">${label}</span>`;
+    } else {
+      badgeWrap.innerHTML = '';
+    }
+
+    const actionEl = document.getElementById('preview-action');
+    if (discord) {
+      actionEl.innerHTML = `<span style="font-size:12px;color:#a5b4fc;font-weight:600;">DM on Discord</span>`;
+    } else {
+      actionEl.innerHTML = `<span style="font-size:12px;color:var(--blue-300);font-weight:600;">Add to cart</span>`;
+    }
+  }
+
+  function saveListing() {
+    const name = document.getElementById('b-name').value.trim();
+    const desc = document.getElementById('b-desc').value.trim();
+    const price = document.getElementById('b-price').value.trim();
+    if (!name) { showToast('Listing name is required', 'error'); return; }
+    if (!desc) { showToast('Description is required', 'error'); return; }
+    if (!price) { showToast('Price is required', 'error'); return; }
+
+    const listing = {
+      id: editingId || 'l_' + Date.now(),
+      name, desc, price,
+      currency: document.getElementById('b-currency').value.trim(),
+      cat: document.getElementById('b-cat').value,
+      badge: selectedBadge,
+      customBadge: document.getElementById('b-custom-badge').value.trim(),
+      discord: document.getElementById('b-discord').checked,
+      visible: document.getElementById('b-visible').checked
+    };
+
+    if (editingId) {
+      const idx = listings.findIndex(x => x.id === editingId);
+      listings[idx] = listing;
+      showToast('Listing updated', 'success');
+    } else {
+      listings.push(listing);
+      showToast('Listing created', 'success');
+    }
+
+    localStorage.setItem('err-listings', JSON.stringify(listings));
+    resetForm();
+    renderManageList();
+  }
+
+  // ─── manage ───
+  function renderManageList() {
+    const el = document.getElementById('manage-list');
+    if (listings.length === 0) {
+      el.innerHTML = '<p style="color:var(--text-3);font-size:13px;text-align:center;padding:20px 0;">No listings yet.</p>';
+      return;
+    }
+    el.innerHTML = listings.map(l => `
+      <div class="manage-listing">
+        <div class="manage-listing-info">
+          <div class="manage-listing-name">${l.name}</div>
+          <div class="manage-listing-meta">${l.cat} · ${l.price} · ${l.visible ? 'Visible' : 'Draft'} ${l.discord ? '· Discord DM' : ''}</div>
+        </div>
+        <div class="manage-listing-actions">
+          <button class="icon-btn-sm" onclick="loadIntoForm('${l.id}')" title="Edit">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn-sm" onclick="toggleVisible('${l.id}')" title="${l.visible ? 'Hide' : 'Show'}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="icon-btn-sm danger" onclick="deleteListing('${l.id}')" title="Delete">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleVisible(id) {
+    const l = listings.find(x => x.id === id);
+    l.visible = !l.visible;
+    localStorage.setItem('err-listings', JSON.stringify(listings));
+    renderManageList();
+    showToast(l.visible ? 'Listing now visible' : 'Listing hidden (draft)', 'info');
+  }
+
+  function deleteListing(id) {
+    listings = listings.filter(x => x.id !== id);
+    localStorage.setItem('err-listings', JSON.stringify(listings));
+    renderManageList();
+    showToast('Listing deleted', 'info');
+  }
+
+  // ─── init ───
+  updatePreview();
+  renderManageList();
+</script>
+
+</body>
+</html>
