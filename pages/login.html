@@ -322,7 +322,7 @@
   }
 
   // ── login ──
-  function handleLogin() {
+  async function handleLogin() {
     const u = document.getElementById('login-user');
     const p = document.getElementById('login-pass');
     const ue = document.getElementById('user-err');
@@ -333,35 +333,82 @@
     if (!u.value.trim()) { u.classList.add('invalid'); ue.classList.add('show'); valid = false; }
     if (!p.value.trim()) { p.classList.add('invalid'); pe.classList.add('show'); valid = false; }
     if (!valid) return;
+
     const btn = document.getElementById('login-btn');
     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Logging in...`;
     btn.disabled = true;
-    setTimeout(() => { showToast('Logged in successfully', 'success'); setTimeout(() => { window.location.href = '../index.html'; }, 1200); }, 1400);
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: u.value.trim(), password: p.value })
+      });
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || 'Login failed.');
+
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('authUser', JSON.stringify(data.user));
+      showToast('Logged in successfully', 'success');
+      setTimeout(() => { window.location.href = '../index.html'; }, 1200);
+    } catch (error) {
+      showToast(error.message, 'error');
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Log in`;
+      btn.disabled = false;
+    }
   }
 
   // ── forgot: send code ──
-  function handleSendCode() {
+  async function handleSendCode() {
     const emailEl = document.getElementById('reset-email');
     const errEl = document.getElementById('reset-email-err');
     emailEl.classList.remove('invalid'); errEl.classList.remove('show');
-    const val = emailEl.value.trim();
+    const val = emailEl.value.trim().toLowerCase();
     if (!val || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
       emailEl.classList.add('invalid'); errEl.classList.add('show'); return;
     }
+
     const btn = document.getElementById('send-code-btn');
     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Sending...`;
     btn.disabled = true;
-    setTimeout(() => {
-      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send reset code`;
-      btn.disabled = false;
-      document.getElementById('code-email-display').textContent = val;
-      // clear code inputs
-      for (let i = 0; i < 6; i++) { const c = document.getElementById('c'+i); c.value=''; c.classList.remove('filled'); }
-      document.getElementById('code-err').classList.remove('show');
-      startResendTimer();
-      goTo('screen-code');
-      setTimeout(() => document.getElementById('c0').focus(), 150);
-    }, 1200);
+
+    // Try backend first; fall back to local implementation
+    try {
+      const resp = await fetch('/api/auth/forgot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: val }) });
+      if (resp.ok) {
+        btn.disabled = false; btn.innerHTML = `Send reset code`;
+        document.getElementById('code-email-display').textContent = val;
+        for (let i = 0; i < 6; i++) { const c = document.getElementById('c'+i); c.value=''; c.classList.remove('filled'); }
+        document.getElementById('code-err').classList.remove('show');
+        startResendTimer();
+        goTo('screen-code');
+        setTimeout(() => document.getElementById('c0').focus(), 150);
+        return;
+      }
+    } catch (e) {
+      // ignore and fallback to local
+    }
+
+    const users = getLocalUsers();
+    const user = users.find(x => x.email === val);
+    if (!user) {
+      emailEl.classList.add('invalid'); errEl.classList.add('show'); btn.disabled = false; btn.innerHTML = `Send reset code`; return;
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const codes = JSON.parse(localStorage.getItem('pw_reset_codes') || '[]');
+    codes.push({ email: val, code, expires: Date.now() + 10 * 60 * 1000 });
+    localStorage.setItem('pw_reset_codes', JSON.stringify(codes));
+
+    btn.disabled = false; btn.innerHTML = `Send reset code`;
+    document.getElementById('code-email-display').textContent = val;
+    for (let i = 0; i < 6; i++) { const c = document.getElementById('c'+i); c.value=''; c.classList.remove('filled'); }
+    document.getElementById('code-err').classList.remove('show');
+    startResendTimer();
+    goTo('screen-code');
+    setTimeout(() => document.getElementById('c0').focus(), 150);
+    showToast(`Reset code (dev-only): ${code}`, 'info');
   }
 
   // ── code inputs ──
@@ -381,7 +428,7 @@
     }
   }
 
-  function handleVerifyCode() {
+  async function handleVerifyCode() {
     const code = Array.from({length:6}, (_,i) => document.getElementById('c'+i).value).join('');
     const errEl = document.getElementById('code-err');
     errEl.classList.remove('show');
@@ -389,17 +436,46 @@
     const btn = document.getElementById('verify-btn');
     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Verifying...`;
     btn.disabled = true;
-    setTimeout(() => {
-      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Verify code`;
+
+    // try backend verify first
+    try {
+      const resp = await fetch('/api/auth/verify-reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+      if (resp.ok) {
+        btn.disabled = false; btn.innerHTML = `Verify code`;
+        document.getElementById('new-pass').value = '';
+        document.getElementById('confirm-pass').value = '';
+        document.getElementById('strength-label').textContent = '';
+        ['s0','s1','s2','s3'].forEach(id => { const el = document.getElementById(id); if (el) el.style.background = ''; });
+        goTo('screen-newpass');
+        setTimeout(() => document.getElementById('new-pass').focus(), 150);
+        return;
+      }
+    } catch (e) {
+      // fallback to local
+    }
+
+    const codes = JSON.parse(localStorage.getItem('pw_reset_codes') || '[]');
+    const found = codes.find(c => c.code === code && c.expires > Date.now());
+    if (!found) {
+      btn.innerHTML = `Verify code`;
       btn.disabled = false;
-      // reset new password form
-      document.getElementById('new-pass').value = '';
-      document.getElementById('confirm-pass').value = '';
-      document.getElementById('strength-label').textContent = '';
-      ['s0','s1','s2','s3'].forEach(id => document.getElementById(id).style.background = '');
-      goTo('screen-newpass');
-      setTimeout(() => document.getElementById('new-pass').focus(), 150);
-    }, 1000);
+      errEl.classList.add('show');
+      return;
+    }
+    // store the email we're resetting in sessionStorage
+    sessionStorage.setItem('pw_reset_email', found.email);
+    // remove used codes for this email
+    const remaining = codes.filter(c => c.email !== found.email);
+    localStorage.setItem('pw_reset_codes', JSON.stringify(remaining));
+
+    btn.innerHTML = `Verify code`;
+    btn.disabled = false;
+    document.getElementById('new-pass').value = '';
+    document.getElementById('confirm-pass').value = '';
+    document.getElementById('strength-label').textContent = '';
+    ['s0','s1','s2','s3'].forEach(id => { const el = document.getElementById(id); if (el) el.style.background = ''; });
+    goTo('screen-newpass');
+    setTimeout(() => document.getElementById('new-pass').focus(), 150);
   }
 
   // ── resend timer ──
@@ -417,31 +493,95 @@
     }, 1000);
   }
 
+  async function hashPassword(password) {
+    if (window.crypto && crypto.subtle) {
+      const enc = new TextEncoder();
+      const data = enc.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    let h = 0;
+    for (let i = 0; i < password.length; i++) h = Math.imul(31, h) + password.charCodeAt(i) | 0;
+    return (h >>> 0).toString(16);
+  }
+
+  function getLocalUsers() { try { return JSON.parse(localStorage.getItem('local_users') || '[]'); } catch { return []; } }
+  function findLocalUser(identifier) {
+    const id = (identifier || '').trim();
+    if (!id) return null;
+    const users = getLocalUsers();
+    return users.find(u => u.username.toLowerCase() === id.toLowerCase() || u.email === id.toLowerCase());
+  }
+  function saveLocalUsers(users) { try { localStorage.setItem('local_users', JSON.stringify(users)); } catch (e) { /* ignore */ } }
+
+  async function handleLogin() {
+    const u = document.getElementById('login-user');
+    const p = document.getElementById('login-pass');
+    const ue = document.getElementById('user-err');
+    const pe = document.getElementById('pass-err');
+    let valid = true;
+    u.classList.remove('invalid'); ue.classList.remove('show');
+    p.classList.remove('invalid'); pe.classList.remove('show');
+    if (!u.value.trim()) { u.classList.add('invalid'); ue.classList.add('show'); valid = false; }
+    if (!p.value.trim()) { p.classList.add('invalid'); pe.classList.add('show'); valid = false; }
+    if (!valid) return;
+    const btn = document.getElementById('login-btn');
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Logging in...`;
+    btn.disabled = true;
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: u.value.trim(), password: p.value })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('authUser', JSON.stringify(data.user));
+        showToast('Logged in successfully', 'success');
+        setTimeout(() => { window.location.href = '../index.html'; }, 1200);
+        return;
+      }
+      throw new Error(data.error || 'Login failed.');
+    } catch (err) {
+      // fallback to local users
+      try {
+        const identifier = u.value.trim();
+        const user = findLocalUser(identifier);
+        if (!user) throw new Error('User not found (local).');
+        const hashed = await hashPassword(p.value);
+        if (hashed !== user.password_hash) throw new Error('Invalid username/email or password.');
+        const token = (crypto && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('authUser', JSON.stringify({ id: user.id, username: user.username, email: user.email }));
+        try { if (typeof renderAuthState === 'function') renderAuthState(); } catch(e) {}
+        showToast('Logged in (local)', 'success');
+        setTimeout(() => { window.location.href = '../index.html'; }, 900);
+        return;
+      } catch (localErr) {
+        showToast(localErr.message || 'Unable to sign in', 'error');
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Log in`;
+        btn.disabled = false;
+      }
+    }
+  }
+
   function handleResend() {
-    showToast('Code resent', 'success');
+    const email = document.getElementById('code-email-display').textContent.trim().toLowerCase();
+    if (!email) { showToast('No email available to resend code', 'error'); return; }
+    const users = getLocalUsers();
+    if (!users.find(u => u.email === email)) { showToast('No local user for that email', 'error'); return; }
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const codes = JSON.parse(localStorage.getItem('pw_reset_codes') || '[]');
+    codes.push({ email, code, expires: Date.now() + 10 * 60 * 1000 });
+    localStorage.setItem('pw_reset_codes', JSON.stringify(codes));
     for (let i = 0; i < 6; i++) { const c = document.getElementById('c'+i); c.value=''; c.classList.remove('filled'); }
     document.getElementById('c0').focus();
     startResendTimer();
+    showToast(`Reset code (dev-only): ${code}`, 'info');
   }
 
-  // ── strength meter ──
-  function checkStrength(val) {
-    let score = 0;
-    if (val.length >= 8) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-    const colors = ['#f87171','#fb923c','#facc15','#4ade80'];
-    const labels = ['Weak','Fair','Good','Strong'];
-    for (let i = 0; i < 4; i++) {
-      document.getElementById('s'+i).style.background = i < score ? colors[score-1] : 'var(--bg-4)';
-    }
-    document.getElementById('strength-label').textContent = val.length ? labels[score-1] || '' : '';
-    document.getElementById('strength-label').style.color = val.length ? colors[score-1] : 'var(--text-3)';
-  }
-
-  // ── reset password ──
-  function handleResetPassword() {
+  async function handleResetPassword() {
     const np = document.getElementById('new-pass');
     const cp = document.getElementById('confirm-pass');
     const npe = document.getElementById('new-pass-err');
@@ -452,14 +592,44 @@
     if (np.value.length < 8) { np.classList.add('invalid'); npe.classList.add('show'); valid = false; }
     if (np.value !== cp.value) { cp.classList.add('invalid'); cpe.classList.add('show'); valid = false; }
     if (!valid) return;
+
     const btn = document.getElementById('reset-btn');
     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Resetting...`;
     btn.disabled = true;
-    setTimeout(() => {
-      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Reset password`;
-      btn.disabled = false;
-      goTo('screen-done');
-    }, 1200);
+
+    (async () => {
+      try {
+        const newPass = np.value;
+        // try backend
+        try {
+          const resp = await fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newPassword: newPass, email: sessionStorage.getItem('pw_reset_email') }) });
+          if (resp.ok) {
+            btn.innerHTML = `Reset password`;
+            btn.disabled = false;
+            goTo('screen-done');
+            return;
+          }
+        } catch (e) {}
+
+        // local fallback
+        const email = sessionStorage.getItem('pw_reset_email');
+        if (!email) throw new Error('No reset session found.');
+        const users = getLocalUsers();
+        const idx = users.findIndex(u => u.email === email);
+        if (idx === -1) throw new Error('Local user not found.');
+        const hashed = await hashPassword(newPass);
+        users[idx].password_hash = hashed;
+        saveLocalUsers(users);
+        sessionStorage.removeItem('pw_reset_email');
+        btn.innerHTML = `Reset password`;
+        btn.disabled = false;
+        goTo('screen-done');
+      } catch (err) {
+        btn.innerHTML = `Reset password`;
+        btn.disabled = false;
+        showToast(err.message || 'Unable to reset password', 'error');
+      }
+    })();
   }
 
   document.addEventListener('keydown', e => {
@@ -470,6 +640,9 @@
       else if (active === 'screen-newpass') handleResetPassword();
     }
   });
+
+  // expose handlers globally in case inline onclick references need them
+  try { window.handleLogin = handleLogin; window.handleSendCode = handleSendCode; window.handleVerifyCode = handleVerifyCode; window.handleResetPassword = handleResetPassword; window.handleResend = handleResend; } catch(e) {}
 </script>
 <style>
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

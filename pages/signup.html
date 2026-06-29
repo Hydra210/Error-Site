@@ -208,7 +208,26 @@
     label.textContent = val.length === 0 ? 'Use at least 8 characters with a mix of letters and numbers' : levels[lvl].t;
   }
 
-  function handleSignup() {
+  async function hashPassword(password) {
+    if (window.crypto && crypto.subtle) {
+      const enc = new TextEncoder();
+      const data = enc.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    // fallback naive hash (only if SubtleCrypto unavailable)
+    let h = 0;
+    for (let i = 0; i < password.length; i++) h = Math.imul(31, h) + password.charCodeAt(i) | 0;
+    return (h >>> 0).toString(16);
+  }
+
+  function getLocalUsers() {
+    try { return JSON.parse(localStorage.getItem('local_users') || '[]'); } catch { return []; }
+  }
+  function saveLocalUsers(users) { localStorage.setItem('local_users', JSON.stringify(users)); }
+  function createToken() { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+  async function handleSignup() {
     const u = document.getElementById('su-user');
     const e = document.getElementById('su-email');
     const p = document.getElementById('su-pass');
@@ -225,11 +244,51 @@
     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 0.8s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Creating account...`;
     btn.disabled = true;
 
-    setTimeout(() => {
-      showToast('Account created — connect your backend to persist users', 'success');
-      setTimeout(() => { window.location.href = '../index.html'; }, 1400);
-    }, 1600);
+    // Try backend first, fall back to local storage on error
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u.value.trim(), email: e.value.trim(), password: p.value })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('authUser', JSON.stringify(data.user));
+        showToast('Account created successfully', 'success');
+        setTimeout(() => { window.location.href = '../index.html'; }, 1400);
+        return;
+      }
+      // if backend rejects, surface that error
+      throw new Error(data.error || 'Signup failed.');
+    } catch (err) {
+      // fallback: localStorage-based users
+      try {
+        const username = u.value.trim();
+        const email = e.value.trim().toLowerCase();
+        const users = getLocalUsers();
+        if (users.find(x => x.username.toLowerCase() === username.toLowerCase())) throw new Error('Username already exists locally.');
+        if (users.find(x => x.email === email)) throw new Error('Email already exists locally.');
+        const passwordHash = await hashPassword(p.value);
+        const id = Date.now();
+        const user = { id, username, email, password_hash: passwordHash, created_at: new Date().toISOString() };
+        users.push(user);
+        saveLocalUsers(users);
+        const token = createToken();
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('authUser', JSON.stringify({ id: user.id, username: user.username, email: user.email }));
+        try { if (typeof renderAuthState === 'function') renderAuthState(); } catch(e) {}
+        showToast('Account created (saved locally)', 'success');
+        setTimeout(() => { window.location.href = '../index.html'; }, 900);
+        return;
+      } catch (localErr) {
+        showToast(localErr.message || 'Unable to create account.', 'error');
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg> Create account`;
+        btn.disabled = false;
+      }
+    }
   }
+
+  try { window.handleSignup = handleSignup; } catch(e) {}
 </script>
 
 <style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
