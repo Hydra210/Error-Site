@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Local Data Migration</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    body { padding: 28px; max-width: 980px; margin: auto; }
+    .card { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 6px 24px rgba(20,20,40,0.06); }
+    textarea { width:100%; min-height:200px; font-family: monospace; font-size:13px; padding:8px; }
+    .row { display:flex; gap:8px; margin-top:8px; }
+    .btn { padding:8px 12px; border-radius:6px; border: none; cursor:pointer; }
+    .btn.primary { background:#2563eb; color:#fff; }
+    .btn.ghost { background:transparent; border:1px solid #ddd; }
+    .note { font-size:13px; color:#555; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Secret — Local Data Migration</h2>
+    <p class="note">This page is not linked anywhere. It can export your current client-side data and attempt to POST it to a running backend. For now data stays on your computer.</p>
+
+    <h3>Export local users</h3>
+    <div class="row">
+      <button class="btn primary" id="export-json">Download JSON</button>
+      <button class="btn ghost" id="show-json">Preview JSON</button>
+      <button class="btn ghost" id="generate-sql">Generate SQL</button>
+      <button class="btn ghost" id="migrate-server">Migrate to Server</button>
+    </div>
+
+    <h3 style="margin-top:16px">Preview / Output</h3>
+    <textarea id="output" placeholder="Preview appears here..."></textarea>
+
+    <h3 style="margin-top:12px">Import</h3>
+    <input type="file" id="import-file" accept="application/json" />
+    <div class="row" style="margin-top:8px">
+      <button class="btn primary" id="import-btn">Import JSON to local</button>
+      <button class="btn ghost" id="clear-local">Clear local users</button>
+    </div>
+
+    <p class="note">SQL output will attempt to map `local_users` fields into a `users` table. Review before running on your DB.</p>
+  </div>
+
+  <script src="../js/main.js"></script>
+  <script>
+    function getLocalUsers() { try { return JSON.parse(localStorage.getItem('local_users')||'[]'); } catch { return []; } }
+    function saveLocalUsers(u){ try{ localStorage.setItem('local_users', JSON.stringify(u)); }catch(e){}
+    }
+
+    const out = document.getElementById('output');
+    document.getElementById('show-json').addEventListener('click', () => {
+      const u = getLocalUsers(); out.value = JSON.stringify(u, null, 2); showToast('Preview loaded');
+    });
+
+    document.getElementById('export-json').addEventListener('click', () => {
+      const u = getLocalUsers();
+      const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), users: u }, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `local_users_${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      showToast('JSON exported');
+    });
+
+    document.getElementById('generate-sql').addEventListener('click', () => {
+      const u = getLocalUsers();
+      if (!u.length) { showToast('No local users found', 'error'); return; }
+      const lines = [];
+      lines.push("-- Generated INSERTs for users table (verify columns match your DB)");
+      u.forEach(user => {
+        const id = user.id || Math.floor(Math.random()*1000000);
+        const username = (user.username||'').replace(/'/g,"''");
+        const email = (user.email||'').replace(/'/g,"''");
+        const p = (user.password_hash||'').replace(/'/g,"''");
+        const created = user.created_at || new Date().toISOString();
+        lines.push(`INSERT INTO users (id, username, email, password_hash, created_at) VALUES (${id}, '${username}', '${email}', '${p}', '${created}');`);
+      });
+      out.value = lines.join('\n'); showToast('SQL generated');
+    });
+
+    document.getElementById('import-file').addEventListener('change', async (e) => {
+      const f = e.target.files[0]; if (!f) return; const txt = await f.text(); try { const parsed = JSON.parse(txt); if (parsed.users) { out.value = JSON.stringify(parsed.users, null, 2); showToast('File parsed — click Import'); } else { out.value = JSON.stringify(parsed, null, 2); showToast('File parsed'); } } catch (err) { showToast('Invalid JSON file', 'error'); }
+    });
+
+    document.getElementById('import-btn').addEventListener('click', () => {
+      try {
+        const data = out.value.trim(); if (!data) { showToast('No JSON in preview area', 'error'); return; }
+        const parsed = JSON.parse(data);
+        const users = Array.isArray(parsed) ? parsed : (parsed.users || parsed);
+        if (!Array.isArray(users)) { showToast('JSON must be an array of users', 'error'); return; }
+        saveLocalUsers(users);
+        showToast('Imported to local_users');
+      } catch (e) { showToast('Invalid JSON', 'error'); }
+    });
+
+    document.getElementById('clear-local').addEventListener('click', () => {
+      if (!confirm('Clear local_users and related keys? This cannot be undone.')) return;
+      localStorage.removeItem('local_users'); localStorage.removeItem('authUser'); localStorage.removeItem('authToken'); localStorage.removeItem('pw_reset_codes'); sessionStorage.removeItem('pw_reset_email'); out.value = ''; showToast('Local storage cleared');
+    });
+
+    document.getElementById('migrate-server').addEventListener('click', async () => {
+      const users = getLocalUsers(); if (!users.length) { showToast('No local users to migrate', 'error'); return; }
+      if (!confirm('Attempt to POST your local users to /api/admin/import-local-users on the backend?')) return;
+      try {
+        const resp = await fetch('/api/admin/import-local-users', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ users }) });
+        const data = await resp.json();
+        if (resp.ok) { showToast('Server import successful', 'success'); out.value = JSON.stringify(data, null, 2); } else { showToast(data.error || 'Server import failed', 'error'); out.value = JSON.stringify(data, null, 2); }
+      } catch (err) {
+        showToast('Backend unreachable — export JSON instead', 'error');
+      }
+    });
+  </script>
+</body>
+</html>
