@@ -1,0 +1,14 @@
+[
+  {
+    "id": "local-1",
+    "username": "testmock",
+    "email": "testmock@example.com",
+    "password_hash": "newpw123"
+  },
+  {
+    "id": "local-2",
+    "username": "Patrick",
+    "email": "semajgause2@icloud.com",
+    "password_hash": "Gausekid123"
+  }
+]
