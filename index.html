@@ -304,11 +304,42 @@
   })();
 
   function handleQuickLogin() {
-    const u = document.getElementById('nav-user').value.trim();
-    const p = document.getElementById('nav-pass').value.trim();
-    if (!u || !p) { showToast('Fill in both fields', 'error'); return; }
-    showToast('Logging in...', 'info');
-    setTimeout(() => { window.location.href = 'pages/login.html'; }, 800);
+    (async () => {
+      const u = document.getElementById('nav-user').value.trim();
+      const p = document.getElementById('nav-pass').value.trim();
+      if (!u || !p) { showToast('Fill in both fields', 'error'); return; }
+      const btn = document.querySelector('.login-strip .btn');
+      showToast('Logging in...', 'info');
+
+      // try backend first
+      try {
+        const resp = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ identifier: u, password: p }) });
+        const data = await resp.json();
+        if (resp.ok) {
+          localStorage.setItem('authToken', data.token);
+          localStorage.setItem('authUser', JSON.stringify(data.user));
+          showToast('Logged in', 'success');
+          setTimeout(() => location.reload(), 700);
+          return;
+        }
+      } catch (e) {}
+
+      // fallback to local users
+      try {
+        const users = (typeof getLocalUsers === 'function') ? getLocalUsers() : JSON.parse(localStorage.getItem('local_users')||'[]');
+        const user = users.find(x => x.username.toLowerCase() === u.toLowerCase() || x.email === u.toLowerCase());
+        if (!user) throw new Error('User not found');
+        const hashed = await (typeof hashPassword === 'function' ? hashPassword(p) : (async () => { let h=0; for(let i=0;i<p.length;i++) h=Math.imul(31,h)+p.charCodeAt(i)|0; return (h>>>0).toString(16); })());
+        if (hashed !== user.password_hash) throw new Error('Invalid credentials');
+        const token = (crypto && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now().toString(36);
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('authUser', JSON.stringify({ id: user.id, username: user.username, email: user.email }));
+        showToast('Logged in (local)', 'success');
+        setTimeout(() => location.reload(), 700);
+      } catch (err) {
+        showToast(err.message || 'Unable to log in', 'error');
+      }
+    })();
   }
 </script>
 

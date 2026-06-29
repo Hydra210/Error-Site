@@ -1,0 +1,17 @@
+{
+  "name": "error-site-backend",
+  "version": "1.0.0",
+  "description": "Backend for Error-Site authentication and site APIs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.1.1",
+    "pg": "^8.10.0"
+  }
+}
