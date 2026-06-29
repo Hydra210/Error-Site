@@ -171,7 +171,7 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ message: 'Signed out successfully.' });
 });
 
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, '.')));
 
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
